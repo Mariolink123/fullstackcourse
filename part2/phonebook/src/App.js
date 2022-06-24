@@ -11,8 +11,7 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filterName, setNewFilter] = useState('')
-  const [successMessage, setSuccessMessage] = useState(null)
-  const [errorMessage, setErrorMessage] = useState(null)
+  const [notification, setNotification] = useState(null)
 
   useEffect(() => {
     personService
@@ -21,6 +20,13 @@ const App = () => {
         setPersons(initialPersons)
       })
   }, [])
+
+  const notify = (message, type='info') => {
+    setNotification({ message, type })
+    setTimeout(() => {
+      setNotification(null)
+    }, 3000)
+  }
 
   const addPerson = (event) => {
     event.preventDefault()
@@ -44,12 +50,13 @@ const App = () => {
         setPersons(persons.concat(returnedPerson))
         setNewName('')
         setNewNumber('')
-        setSuccessMessage (
+        notify (
           `Added ${newName}`
         )
-        setTimeout(() => {
-          setSuccessMessage(null)
-        }, 5000)
+      }).catch(error => {
+        notify(
+          `${error.response.data.error}`, 'alert'
+        )
       })
   }
 
@@ -74,7 +81,9 @@ const App = () => {
     const id = personToUpdate.id
     const name = personToUpdate.name
 
-    window.confirm(`${name} is already added to the phonebook. Do you want to update their number?`)
+    if (!window.confirm(`${name} is already added to the phonebook. Do you want to update their number?`)) {
+      return
+    }
     
     personService
       .update(id, personToUpdate)
@@ -82,16 +91,13 @@ const App = () => {
         setPersons(persons.map(person => person.id !== id ? person : returnedPerson ))
         setNewName('')
         setNewNumber('')
-        setSuccessMessage (
+        notify (
           `Changed ${newName}'s number to ${personToUpdate.number}`
         )
-        setTimeout(() => {
-          setSuccessMessage(null)
-        }, 5000)
       })
       .catch(error => {
-        setErrorMessage (
-          `The person '${personToUpdate.name}' was already deleted from the server`
+        notify (
+         `${error.response.data.error}`, 'alert'
         )
         setPersons(persons.filter(p => p.id !== id))
       })
@@ -121,8 +127,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
-      <Notification message={successMessage} colour='green' />
-      <Notification message={errorMessage} colour='red' />
+      <Notification notification={notification} />
       <Filter filterName={filterName} handleFilterChange={handleFilterChange}></Filter>
       <h2>add a new person</h2>
       <PersonForm addPerson={addPerson} handleNameChange={handleNameChange}
